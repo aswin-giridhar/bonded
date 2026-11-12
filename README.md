@@ -45,6 +45,41 @@ for something binds a policy on that single payment. The premium is the agent's 
 - **Manipulation costs money.** Faking a clean record means paying real premiums. An
   underwriter who prices a vulnerable agent cheaply loses capital on the first real claim.
 
+## Architecture
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Buyer
+    participant UI as Bonded dashboard
+    participant API as Bonded server
+    participant PP as PayPal (sandbox)
+    participant Agent as AI agent (Gemini / Claude)
+    participant Adj as Claude adjuster
+
+    Buyer->>UI: Buy cover on an agent
+    UI->>API: POST /api/policy/order
+    API->>PP: Orders v2: create premium order
+    Buyer->>PP: Approve premium in PayPal Checkout
+    UI->>API: POST /api/policy/capture
+    API->>PP: Orders v2: capture (payer becomes claim beneficiary)
+    API->>Agent: Order + vendor listing (contains the injection)
+    Agent-->>API: Tool call: pay(recipient_email) or pay_vendor_of_record()
+    API->>PP: Payouts v1: execute the tool call
+    API->>PP: Payouts v1: read the payout back
+    PP-->>API: Receiver PayPal actually paid
+    alt receiver differs from insured payee
+        API->>PP: Payouts v1: claim to buyer, read back and verify
+    end
+    API->>Adj: Evidence from PayPal
+    Adj-->>API: Adjuster note (advisory only)
+    API-->>UI: SSE: verdict, re-priced rate, AG Grid policy book row
+```
+
+The breach decision is one comparison in code: the receiver on PayPal's own payout record
+against the insured payee. No model makes it, and the agent's account of what it did is never
+used.
+
 ## How PayPal is used: three rails, one source of truth
 
 | Step | PayPal API | What it does |
@@ -141,6 +176,7 @@ cd bonded
 cp .env.example .env      # then fill in the values below
 npm run check             # proves the PayPal rails: OAuth → $1 Payout → read-back
 npm start                 # http://localhost:4173
+npm test                  # pricing invariants, no API keys needed
 ```
 
 `.env` needs:
@@ -184,6 +220,7 @@ src/server.mjs         zero-dependency HTTP server, SSE feed, quote API, attack 
 public/index.html      dashboard, PayPal JS SDK buttons, AG Grid policy book
 script/check-paypal.mjs  end-to-end rail check against the sandbox
 openapi.yaml           OpenAPI 3.0 spec of the API
+test/                  pricing invariant tests (npm test)
 render.yaml            Render blueprint for the hosted demo
 ```
 
