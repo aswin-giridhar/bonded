@@ -9,7 +9,7 @@ market's live price of that agent's risk. It is computed from a loss record that
 **only from what PayPal says actually happened**. If the agent pays the wrong party, the claim
 comes back to your PayPal account.
 
-**Live demo: https://bonded-urgg.onrender.com** (hosted on Render; the free instance may take
+**Demo video: https://youtu.be/BlzQZbGrY5Y** · **Live demo: https://bonded-urgg.onrender.com** (hosted on Render; the free instance may take
 about 50 seconds to wake up). Paying a premium needs a PayPal **sandbox** buyer account: use your
 own from developer.paypal.com, or the test login given in the Devpost testing instructions.
 
