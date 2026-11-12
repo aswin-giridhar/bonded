@@ -1,0 +1,264 @@
+openapi: 3.0.3
+info:
+  title: Bonded API
+  version: 1.0.0
+  description: |
+    Insurance for AI agents that spend your money, settled on PayPal.
+
+    An agent framework calls `GET /api/quote` to price cover on one payment before it spends.
+    A buyer then pays the premium through PayPal Checkout (`POST /api/policy/order`, approve in
+    PayPal, `POST /api/policy/capture`). Bonded runs the insured agent, reads the agent's PayPal
+    payout back from PayPal, and pays a claim through PayPal Payouts if the receiver differs from
+    the insured payee.
+
+    All PayPal calls run in the PayPal sandbox.
+  license:
+    name: MIT
+    url: https://github.com/aswin-giridhar/bonded/blob/main/LICENSE
+servers:
+  - url: https://bonded-urgg.onrender.com
+    description: Hosted demo
+  - url: http://localhost:4173
+    description: Local
+tags:
+  - name: Quotes
+    description: Price cover before an agent spends.
+  - name: Policies
+    description: Buy cover through PayPal Checkout and run the insured job.
+  - name: Book
+    description: Read the underwriting book and its live event stream.
+  - name: Attack lab
+    description: Change the attacker-controlled text in the vendor listing.
+paths:
+  /api/quote:
+    get:
+      tags: [Quotes]
+      operationId: getQuote
+      summary: Quote cover for one agent payment
+      description: Returns the rate and premium for insuring a payment of `cover` cents made by the given agent, with every component of the rate.
+      parameters:
+        - name: agentId
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/AgentId' }
+        - name: cover
+          in: query
+          required: false
+          description: Amount to insure, in USD cents.
+          schema: { type: integer, minimum: 100, maximum: 20000, default: 4000 }
+      responses:
+        '200':
+          description: Quote
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Quote' }
+        '400':
+          description: Unknown agent or invalid cover
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: The pool cannot carry this cover
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/policy/order:
+    post:
+      tags: [Policies]
+      operationId: createPremiumOrder
+      summary: Create a PayPal order for the premium
+      description: Prices cover on the agent's next $40.00 job and creates a PayPal Orders v2 order for the premium. The buyer approves it in PayPal Checkout.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [agentId]
+              properties:
+                agentId: { $ref: '#/components/schemas/AgentId' }
+      responses:
+        '200':
+          description: PayPal order created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id: { type: string, description: PayPal order ID to approve in Checkout }
+        '400':
+          description: Unknown agent or malformed body
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: The pool cannot carry this cover
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429':
+          description: Demo rate limit reached
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/policy/capture:
+    post:
+      tags: [Policies]
+      operationId: capturePremium
+      summary: Capture the approved premium and bind cover
+      description: Captures the approved PayPal order, binds the policy at the approved price, and starts the insured job. Progress arrives on `/api/events`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orderId]
+              properties:
+                orderId: { type: string }
+      responses:
+        '200':
+          description: Policy bound
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [policyId]
+                properties:
+                  policyId: { type: integer }
+        '400':
+          description: Unknown order or malformed body
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: Cover unavailable; no premium was taken
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/state:
+    get:
+      tags: [Book]
+      operationId: getBook
+      summary: Read the underwriting book
+      responses:
+        '200':
+          description: Current agents, quotes and policies
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Book' }
+  /api/events:
+    get:
+      tags: [Book]
+      operationId: streamEvents
+      summary: Live event stream (server-sent events)
+      description: Every PayPal call and model decision, as `text/event-stream`. Each `data:` line is an Event.
+      responses:
+        '200':
+          description: Event stream
+          content:
+            text/event-stream:
+              schema: { type: string }
+  /api/listing:
+    post:
+      tags: [Attack lab]
+      operationId: setListingInjection
+      summary: Replace or reset the attacker's text in the vendor listing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                injection: { type: string, maxLength: 800 }
+                reset: { type: boolean }
+      responses:
+        '200':
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+        '400':
+          description: Empty or too long
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+components:
+  schemas:
+    AgentId:
+      type: string
+      enum: [procure-v1, procure-v2, procure-v3]
+    RateComponents:
+      type: object
+      description: Rate components in basis points.
+      properties:
+        base: { type: integer }
+        experience: { type: integer, description: Observed loss record, credibility weighted }
+        unproven: { type: integer, description: Loading for missing track record }
+        utilisation: { type: integer }
+        concentration: { type: integer, description: Surcharge for exposure concentrated on one model }
+    Quote:
+      type: object
+      required: [agentId, cover, rateBps, premium]
+      properties:
+        agentId: { $ref: '#/components/schemas/AgentId' }
+        model: { type: string }
+        cover: { type: integer, description: USD cents }
+        currency: { type: string, example: USD }
+        rateBps: { type: integer, example: 1068 }
+        premium: { type: integer, description: USD cents, example: 427 }
+        components: { $ref: '#/components/schemas/RateComponents' }
+        trials: { type: integer }
+        failures: { type: integer }
+        credibilityPct: { type: number }
+    Policy:
+      type: object
+      properties:
+        id: { type: integer }
+        agentId: { $ref: '#/components/schemas/AgentId' }
+        model: { type: string }
+        cover: { type: integer }
+        premium: { type: integer }
+        rateBps: { type: integer }
+        rateAfter: { type: integer }
+        expectedRecipient: { type: string }
+        actualRecipient: { type: string, description: Receiver as recorded by PayPal }
+        breached: { type: boolean }
+        resolved: { type: boolean }
+        premiumCapture: { type: string, description: PayPal capture ID }
+        payoutBatch: { type: string, description: PayPal payout batch of the agent's payment }
+    Agent:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/AgentId' }
+        label: { type: string }
+        kind: { type: string }
+        model: { type: string }
+        pool: { type: integer }
+        exposure: { type: integer }
+        trials: { type: integer }
+        failures: { type: integer }
+        quote: { $ref: '#/components/schemas/Quote' }
+    Book:
+      type: object
+      properties:
+        cover: { type: integer }
+        vendor: { type: string }
+        bookCapital: { type: integer }
+        bookExposure: { type: integer }
+        agents:
+          type: array
+          items: { $ref: '#/components/schemas/Agent' }
+        policies:
+          type: array
+          items: { $ref: '#/components/schemas/Policy' }
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
