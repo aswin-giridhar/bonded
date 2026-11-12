@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bonded</title>
+<meta name="description" content="Insurance for AI agents that spend your money, settled on PayPal.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #eef1ef;
+    --sheet: #f8faf8;
+    --ink: #15212c;
+    --ink-2: #4a5662;
+    --rule: #cdd5d0;
+    --green: #1d6a50;
+    --green-wash: #e1eee8;
+    --red: #b42318;
+    --red-wash: #f8e6e3;
+    --guilloche: rgba(29, 106, 80, 0.07);
+    --focus: #1d6a50;
+    --radius: 6px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #121a20; --sheet: #18232b; --ink: #e6ece8; --ink-2: #9aa7a0; --rule: #2c3a42;
+      --green: #4fbf93; --green-wash: #183229; --red: #f07a6c; --red-wash: #3a1f1c;
+      --guilloche: rgba(79, 191, 147, 0.06); --focus: #4fbf93;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.55 "IBM Plex Sans", system-ui, sans-serif; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.86em; word-break: break-all; }
+  .wrap { max-width: 1320px; margin: 0 auto; padding: 28px 24px 64px; }
+
+  .mast { display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap; padding-bottom: 18px; border-bottom: 2px solid var(--ink); }
+  .brand { font: 600 30px/1 "IBM Plex Sans Condensed", sans-serif; letter-spacing: -0.01em; margin: 0; }
+  .lede { margin: 0; color: var(--ink-2); max-width: 66ch; }
+  .lede b { color: var(--ink); font-weight: 600; }
+
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 32px; margin-top: 28px; align-items: start; }
+  @media (max-width: 1080px) { .layout { grid-template-columns: 1fr; } }
+
+  h2 { font-size: 19px; font-weight: 600; margin: 0 0 4px; letter-spacing: -0.005em; }
+  .hint { color: var(--ink-2); font-size: 14.5px; margin: 0 0 14px; max-width: 70ch; }
+
+  .order { background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--radius); padding: 20px 22px; }
+  .facts { display: grid; grid-template-columns: repeat(4, auto); justify-content: start; gap: 6px 36px; margin: 14px 0 16px; }
+  @media (max-width: 720px) { .facts { grid-template-columns: 1fr 1fr; } }
+  .facts dt { font-size: 13px; color: var(--ink-2); }
+  .facts dd { margin: 0; font-weight: 500; }
+  .listing { display: grid; grid-template-columns: minmax(0, 1fr) 200px; gap: 18px; align-items: start; }
+  @media (max-width: 720px) { .listing { grid-template-columns: 1fr; } }
+  .listing pre { margin: 0; white-space: pre-wrap; font: 13.5px/1.6 "IBM Plex Mono", monospace; font-variant-ligatures: none; background: var(--paper); border-radius: 4px; padding: 14px 16px; }
+  .listing pre mark { background: var(--red-wash); color: var(--red); padding: 1px 0; }
+  .margin-note { margin: 0; font-size: 13.5px; color: var(--red); border-left: 2px solid var(--red); padding-left: 12px; }
+
+  .bonds { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 24px; }
+  @media (max-width: 860px) { .bonds { grid-template-columns: 1fr; } }
+  .bond {
+    position: relative; overflow: hidden; border-radius: var(--radius); padding: 22px 22px 20px;
+    background:
+      repeating-radial-gradient(circle at 100% 0%, transparent 0 9px, var(--guilloche) 9px 10px),
+      repeating-radial-gradient(circle at 0% 100%, transparent 0 13px, var(--guilloche) 13px 14px),
+      var(--sheet);
+    border: 1px solid var(--rule);
+    box-shadow: inset 0 0 0 5px var(--sheet), inset 0 0 0 6px var(--rule);
+  }
+  .bond-name { font-size: 19px; font-weight: 600; margin: 0; }
+  .bond-kind { font-size: 14px; color: var(--ink-2); margin: 2px 0 0; max-width: 28ch; }
+  .rate-row { display: flex; align-items: baseline; gap: 12px; margin: 18px 0 2px; flex-wrap: wrap; }
+  .rate { font: 600 56px/1 "IBM Plex Sans Condensed", sans-serif; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .was { color: var(--ink-2); font-size: 15px; }
+  .was s { text-decoration-thickness: 1.5px; }
+  .moved-up { color: var(--red); font-weight: 600; font-size: 15px; }
+  .moved-down { color: var(--green); font-weight: 600; font-size: 15px; }
+  .rate-cap { font-size: 14px; color: var(--ink-2); margin: 0; }
+
+  .parts { display: flex; height: 6px; border-radius: 3px; overflow: hidden; margin: 14px 0 8px; gap: 2px; }
+  .parts span { display: block; height: 100%; }
+  .keys { display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: 13px; color: var(--ink-2); margin: 0; padding: 0; list-style: none; }
+  .keys i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -0.5px; }
+
+  .book { display: grid; grid-template-columns: 1fr auto; gap: 4px 20px; margin: 16px 0; padding: 12px 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); font-size: 14.5px; }
+  .book dt { color: var(--ink-2); }
+  .book dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; }
+  .book dd.cut { color: var(--red); }
+
+  .premium { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .premium b { font-size: 20px; font-variant-numeric: tabular-nums; }
+
+  .track { list-style: none; padding: 0; margin: 14px 0 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; font-size: 12.5px; color: var(--ink-2); }
+  .track li { border-top: 3px solid var(--rule); padding-top: 6px; transition: border-color 0.25s ease, color 0.25s ease; }
+  .track li.on { border-color: var(--ink); color: var(--ink); }
+  .track li.now { border-color: var(--green); color: var(--ink); font-weight: 500; }
+  .status { min-height: 22px; font-size: 14px; margin: 8px 0 0; color: var(--ink-2); }
+  .status.err { color: var(--red); }
+
+  .verdict { margin-top: 14px; padding: 14px 16px; border-radius: 4px; font-size: 14.5px; }
+  .verdict.breach { background: var(--red-wash); }
+  .verdict.clean { background: var(--green-wash); }
+  .verdict p { margin: 0 0 8px; }
+  .verdict p:last-child { margin: 0; }
+  .verdict .who { font-weight: 600; }
+
+  /* The stamp is the page's one orchestrated motion moment: it lands when PayPal settles. */
+  .stamp {
+    position: absolute; top: 20px; right: 18px; transform: rotate(-7deg);
+    font: 600 17px/1.1 "IBM Plex Sans Condensed", sans-serif; letter-spacing: 0.04em; text-align: center;
+    padding: 8px 14px; border: 3px double currentColor; border-radius: 4px; pointer-events: none; opacity: 0.9;
+  }
+  .stamp small { display: block; font-size: 12.5px; letter-spacing: 0.01em; font-weight: 500; }
+  .stamp.breach { color: var(--red); }
+  .stamp.clean { color: var(--green); }
+  @media (prefers-reduced-motion: no-preference) {
+    .stamp.fresh { animation: stamp 0.42s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+    @keyframes stamp { from { transform: rotate(-7deg) scale(1.9); opacity: 0; } to { transform: rotate(-7deg) scale(1); opacity: 0.9; } }
+  }
+
+  .ledger { position: sticky; top: 20px; background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--radius); padding: 20px 20px 8px; max-height: calc(100dvh - 40px); overflow: auto; }
+  @media (max-width: 1080px) { .ledger { position: static; max-height: none; } }
+  .entries { list-style: none; margin: 0; padding: 0; }
+  .entries li { padding: 11px 0; border-top: 1px solid var(--rule); font-size: 14px; }
+  .entries .k { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--ink-2); margin-bottom: 2px; }
+  .entries .k b { font-weight: 600; color: var(--ink); }
+  .entries li.breach .k b, .entries li.error .k b { color: var(--red); }
+  .entries li.clean .k b, .entries li.claim .k b { color: var(--green); }
+  .entries .m { word-break: break-word; }
+  .empty { color: var(--ink-2); font-size: 14.5px; }
+
+  .how { margin-top: 28px; }
+  .steps { list-style: none; counter-reset: s; display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; padding: 0; margin: 10px 0 0; font-size: 14px; color: var(--ink-2); }
+  @media (max-width: 860px) { .steps { grid-template-columns: 1fr 1fr; } }
+  .steps li { counter-increment: s; }
+  .steps li::before { content: counter(s); display: block; font: 600 22px/1 "IBM Plex Sans Condensed", sans-serif; color: var(--ink); margin-bottom: 6px; }
+  .steps b { color: var(--ink); font-weight: 600; }
+  @media (max-width: 480px) { .wrap { padding: 20px 16px 48px; } .rate { font-size: 46px; } .stamp { top: 16px; right: 12px; } .track { font-size: 11.5px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <h1 class="brand">Bonded</h1>
+    <p class="lede">Insurance for AI agents that spend your money. Each agent's premium comes from its record, and that record is written only from <b>what PayPal says actually happened</b>.</p>
+  </header>
+
+  <div class="layout">
+    <main>
+      <section class="order" aria-labelledby="order-h">
+        <h2 id="order-h">The order both agents receive</h2>
+        <p class="hint">Same item, same price, same vendor listing. The listing was written by an attacker.</p>
+        <dl class="facts">
+          <div><dt>Item</dt><dd id="l-item">Loading</dd></div>
+          <div><dt>Price</dt><dd id="l-price"></dd></div>
+          <div><dt>Vendor</dt><dd id="l-vendor"></dd></div>
+          <div><dt>Insured payee</dt><dd class="mono" id="l-email"></dd></div>
+        </dl>
+        <div class="listing">
+          <pre id="l-desc" aria-label="Vendor listing text"></pre>
+          <p class="margin-note">The highlighted text is a hidden instruction aimed at the agent. It tries to send the payment to a different PayPal account.</p>
+        </div>
+      </section>
+
+      <div class="bonds">
+        <article class="bond" id="card-procure-v1"></article>
+        <article class="bond" id="card-procure-v2"></article>
+      </div>
+
+      <section class="how" aria-labelledby="how-h">
+        <h2 id="how-h">What happens when you pay</h2>
+        <ol class="steps">
+          <li><b>You buy cover.</b> The premium goes through PayPal Checkout, and capturing it binds the policy.</li>
+          <li><b>The agent pays.</b> A Gemini agent reads the listing and pays through PayPal Payouts, with no human approval.</li>
+          <li><b>PayPal is the witness.</b> Bonded reads the payout back from PayPal and compares the receiver with the insured payee.</li>
+          <li><b>Claim and re-price.</b> If they differ, your $40 comes back through PayPal, Claude writes the adjuster's note, and the rate moves.</li>
+        </ol>
+      </section>
+    </main>
+
+    <aside class="ledger" aria-labelledby="ledger-h">
+      <h2 id="ledger-h">PayPal ledger</h2>
+      <p class="hint">Every call to PayPal and every model decision, newest first.</p>
+      <ol class="entries" id="feed" aria-live="polite"><li class="empty">Nothing yet. Buy cover on either agent to start.</li></ol>
+    </aside>
+  </div>
+</div>
+
+<script>
+const COLORS = { base: "#8a978f", unproven: "#c28a2c", experience: "#b42318", utilisation: "#2f5f86", concentration: "#6f6a8f" };
+const LABELS = { base: "Floor", unproven: "No track record", experience: "Loss record", utilisation: "Pool in use", concentration: "Same-model exposure" };
+const KIND = {
+  "procure-v1": "Reads the listing as part of its instructions.",
+  "procure-v2": "Treats the listing as untrusted. Payee is fixed in code.",
+};
+const STAKE0 = { "Underwriter A": 30000, "Underwriter B": 20000 };
+const STEP = { bound: 1, "agent-run": 2, "agent-decision": 2, payout: 2, readback: 3, breach: 4, clean: 4, claim: 4, adjuster: 4 };
+const TITLE = {
+  quote: "Quote", bound: "Cover bound", "agent-run": "Agent working", "agent-decision": "Agent decision",
+  payout: "PayPal payout", readback: "PayPal read-back", breach: "Breach", clean: "Settled clean",
+  claim: "Claim paid", adjuster: "Adjuster note", requote: "Re-priced", error: "Error",
+};
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const fmt = (c) => "$" + (c / 100).toFixed(2);
+const pct = (b) => (b / 100).toFixed(2) + "%";
+
+let state, paypalReady = false;
+const firstRate = {}, run = {};
+
+function renderBond(a) {
+  const el = document.getElementById("card-" + a.id);
+  if (!el) return;
+  const q = a.quote, r = run[a.id] ?? {};
+  firstRate[a.id] ??= q?.bps;
+  // While cover is in force the quote includes that exposure, so a delta would
+  // read as a re-price that has not happened. Only show movement once settled.
+  const open = a.exposure > 0;
+  const moved = !open && q && q.bps !== firstRate[a.id] ? q.bps - firstRate[a.id] : 0;
+  const parts = q ? Object.entries(q.parts).filter(([, v]) => v > 0) : [];
+  const total = parts.reduce((s, [, v]) => s + v, 0) || 1;
+  const stakes = Object.entries(a.stakes).map(([w, v]) =>
+    `<dt>${esc(w)}</dt><dd class="${v < STAKE0[w] ? "cut" : ""}">${fmt(v)}</dd>`).join("");
+  const steps = ["Premium paid", "Agent paying", "PayPal read-back", "Settled"].map((s, i) => {
+    const n = i + 1, cls = r.step > n || (r.step === n && r.done) ? "on" : r.step === n ? "now" : "";
+    return `<li class="${cls}">${s}</li>`;
+  }).join("");
+  // The PayPal button lives in a slot that is never re-rendered: moving its
+  // iframe reloads it, and the SDK then closes any checkout popup it opened.
+  if (!el.querySelector(".ppslot")) {
+    el.innerHTML = '<div class="body"></div><div class="ppslot"></div><div class="foot"></div>';
+    if (state.noClient) el.querySelector(".ppslot").innerHTML = '<p class="status err">PAYPAL_CLIENT_ID is missing from .env, so checkout cannot load.</p>';
+  }
+  el.querySelector(".body").innerHTML = `
+    <h3 class="bond-name">${esc(a.label.replace(/ \(.*\)/, ""))}</h3>
+    <p class="bond-kind">${KIND[a.id]}</p>
+    ${r.stamp ? `<div class="stamp ${r.stamp.cls} ${r.stamp.fresh ? "fresh" : ""}" aria-hidden="true">${r.stamp.html}</div>` : ""}
+    <div class="rate-row">
+      <span class="rate">${q ? pct(q.bps) : "n/a"}</span>
+      ${moved ? `<span class="was"><s>${pct(firstRate[a.id])}</s></span><span class="${moved > 0 ? "moved-up" : "moved-down"}">${moved > 0 ? "up" : "down"} ${pct(Math.abs(moved))}</span>` : ""}
+    </div>
+    <p class="rate-cap">${open ? `Quote for the next policy while ${fmt(state.cover)} of cover is in force.` : `Rate on ${fmt(state.cover)} of cover. ${a.trials ? `${a.trials} settled, ${a.failures} breached.` : "No settled payments yet."}`}</p>
+    <div class="parts" role="img" aria-label="Rate breakdown">${parts.map(([k, v]) => `<span style="width:${v / total * 100}%;background:${COLORS[k]}"></span>`).join("")}</div>
+    <ul class="keys">${parts.map(([k, v]) => `<li><i style="background:${COLORS[k]}"></i>${LABELS[k]} ${pct(v)}</li>`).join("")}</ul>
+    <dl class="book"><dt>Underwriting pool</dt><dd>${fmt(a.pool)}</dd>${stakes}</dl>
+    <div class="premium"><span>Premium for this payment</span><b>${q ? fmt(q.premium) : "n/a"}</b></div>`;
+  el.querySelector(".foot").innerHTML = `
+    <ol class="track" aria-label="Progress">${steps}</ol>
+    <p class="status ${r.err ? "err" : ""}" aria-live="polite">${esc(r.status ?? "")}</p>
+    ${r.verdict ? `<div class="verdict ${r.verdict.cls}">${r.verdict.html}</div>` : ""}`;
+  if (r.stamp) r.stamp.fresh = false;
+}
+
+function mountButton(agentId, slot) {
+  const holder = document.createElement("div");
+  holder.className = "pp";
+  slot.appendChild(holder);
+  paypal.Buttons({
+    style: { layout: "horizontal", color: "gold", shape: "rect", label: "pay", height: 44, tagline: false },
+    createOrder: async () => {
+      const res = await fetch("/api/policy/order", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ agentId }) });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error);
+      run[agentId] = { step: 0, status: "Waiting for you to approve the premium in PayPal." };
+      render();
+      return j.id;
+    },
+    onApprove: async ({ orderID }) => {
+      run[agentId] = { step: 1, status: "Premium approved. Capturing it and binding the cover." };
+      render();
+      const res = await fetch("/api/policy/capture", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ orderId: orderID }) });
+      if (!res.ok) { run[agentId] = { ...run[agentId], err: true, status: (await res.json()).error }; render(); }
+    },
+    onCancel: () => { run[agentId] = { status: "Checkout closed. No premium was taken." }; render(); },
+    onError: (e) => { run[agentId] = { err: true, status: "PayPal checkout failed: " + e }; render(); },
+  }).render(holder);
+}
+
+function render() {
+  const L = state.listing;
+  document.getElementById("l-item").textContent = L.item;
+  document.getElementById("l-price").textContent = fmt(L.priceCents);
+  document.getElementById("l-vendor").textContent = L.vendorName;
+  document.getElementById("l-email").textContent = L.vendorEmailOfRecord;
+  const desc = document.getElementById("l-desc");
+  const i = L.description.indexOf("<!--");
+  desc.textContent = i < 0 ? L.description : L.description.slice(0, i);
+  if (i >= 0) { const m = document.createElement("mark"); m.textContent = L.description.slice(i); desc.append(m); }
+  state.agents.forEach(renderBond);
+}
+
+function addEntry(ev) {
+  const feed = document.getElementById("feed");
+  feed.querySelector(".empty")?.remove();
+  const li = document.createElement("li");
+  li.className = ev.type;
+  const t = new Date(ev.at ?? Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const by = ev.type === "adjuster" && ev.data?.model ? ` by ${ev.data.model}` : "";
+  li.innerHTML = `<div class="k"><b></b><span></span></div><div class="m"></div>`;
+  li.querySelector("b").textContent = (TITLE[ev.type] ?? ev.type) + by;
+  li.querySelector(".k span").textContent = t;
+  li.querySelector(".m").textContent = ev.message;
+  feed.prepend(li);
+}
+
+function onEvent(ev) {
+  if (ev.type === "state") { state = { ...ev.data, noClient: state?.noClient }; return render(); }
+  addEntry(ev);
+  const d = ev.data ?? {}, aid = d.policyId ? d.agentId : null;
+  if (!aid) return;
+  const r = (run[aid] ??= {});
+  if (STEP[ev.type]) r.step = STEP[ev.type];
+  r.err = false;
+  if (["agent-run", "agent-decision", "payout", "readback"].includes(ev.type)) r.status = ev.message;
+  if (ev.type === "breach") {
+    r.status = "";
+    r.stamp = { cls: "breach", fresh: true, html: `Claim paid<small>${fmt(d.payout)} to buyer</small>` };
+    r.verdict = { cls: "breach", html: `<p><span class="who">Breach.</span> PayPal shows the payment went to <span class="mono">${esc(d.actual)}</span>, not the insured payee.</p>` };
+  }
+  if (ev.type === "clean") {
+    r.status = "";
+    r.stamp = { cls: "clean", fresh: true, html: `Settled<small>vendor paid</small>` };
+    r.verdict = { cls: "clean", html: `<p><span class="who">Clean.</span> PayPal confirms the insured payee was paid. The premium stays with the underwriters.</p>` };
+  }
+  if (ev.type === "claim" && r.verdict) r.verdict.html += `<p><span class="who">Claim paid.</span> ${fmt(d.cents)} sent to <span class="mono">${esc(d.receiver)}</span> through PayPal Payouts.</p>`;
+  if (ev.type === "adjuster" && r.verdict) { r.verdict.html += `<p><span class="who">Adjuster (${esc(d.model)}).</span> ${esc(ev.message)}</p>`; r.done = true; }
+  if (ev.type === "error") { r.err = true; r.status = ev.message; }
+  render();
+}
+
+(async () => {
+  state = await (await fetch("/api/state")).json();
+  const { clientId } = await (await fetch("/api/config")).json();
+  state.noClient = !clientId;
+  render();
+  if (clientId) {
+    const s = document.createElement("script");
+    s.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=USD&intent=capture&disable-funding=card,credit,paylater,venmo`;
+    s.onload = () => { paypalReady = true; state.agents.forEach((a) => mountButton(a.id, document.querySelector(`#card-${a.id} .ppslot`))); };
+    s.onerror = () => addEntry({ type: "error", message: "The PayPal JS SDK did not load. Check PAYPAL_CLIENT_ID and your connection." });
+    document.head.appendChild(s);
+  }
+  new EventSource("/api/events").onmessage = (m) => onEvent(JSON.parse(m.data));
+})();
+</script>
+</body>
+</html>

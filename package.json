@@ -1,0 +1,12 @@
+{
+  "name": "bonded",
+  "version": "2.0.0",
+  "description": "Counterparty insurance for AI payment agents, settled on PayPal. The premium is the trust signal.",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "check": "node script/check-paypal.mjs"
+  },
+  "license": "MIT"
+}
