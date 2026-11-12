@@ -1,5 +1,7 @@
 # Bonded
 
+<img src="docs/logo.png" alt="Bonded logo: a surety-bond seal around a shield with an AI node" width="140">
+
 **Insurance for AI agents that spend your money, settled on PayPal. The premium is the trust signal.**
 
 Before you let an AI agent spend your money, buy cover on that one payment. The quote is the
