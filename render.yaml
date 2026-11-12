@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: bonded
+    runtime: node
+    plan: free
+    buildCommand: "true"
+    startCommand: node src/server.mjs
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.1-flash-lite
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_MODEL
+        value: claude-sonnet-5-5
+      - key: JOBS_PER_IP_HOUR
+        value: "12"
+      - key: JOBS_PER_HOUR
+        value: "60"
