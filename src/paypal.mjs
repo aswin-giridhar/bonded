@@ -73,13 +73,14 @@ export async function capturePremiumOrder(orderId) {
     captureId: cap.id,
     cents: Math.round(Number(cap.amount.value) * 100),
     payerEmail: j.payer?.email_address,
+    payerId: j.payer?.payer_id,
     payerName: [j.payer?.name?.given_name, j.payer?.name?.surname].filter(Boolean).join(" "),
   };
 }
 
 // ---------------------------------------------------------------- Payouts v1
 
-export async function sendPayout({ cents, email, note, batchId }) {
+export async function sendPayout({ cents, email, payerId, note, batchId }) {
   const j = await call("POST", "/v1/payments/payouts", {
     sender_batch_header: {
       sender_batch_id: batchId,
@@ -87,9 +88,9 @@ export async function sendPayout({ cents, email, note, batchId }) {
       email_message: note.slice(0, 255),
     },
     items: [{
-      recipient_type: "EMAIL",
+      recipient_type: email ? "EMAIL" : "PAYPAL_ID",
       amount: { currency: "USD", value: (cents / 100).toFixed(2) },
-      receiver: email,
+      receiver: email ?? payerId,
       note: note.slice(0, 4000),
       sender_item_id: `${batchId}-1`,
     }],

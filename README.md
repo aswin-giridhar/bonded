@@ -21,8 +21,9 @@ agent with your money.
   red-teamed Google's Agent Payments Protocol and showed that indirect prompt injection reliably
   redirects a real payment agent's funds.
 - **We reproduced this live while building the project.** Given a marketplace listing containing
-  a fake "payment operations notice", `gemini-2.5-flash` paid the attacker's PayPal email in
-  **3 of 3** runs. The breach in this demo is a live model decision, not a script.
+  a fake "payment operations notice", Gemini agents called their payment tool with the attacker's
+  PayPal email every time we tried (`gemini-2.5-flash` 6/6, `gemini-3.1-flash-lite` 3/3). The breach
+  in this demo is a live model decision, not a script.
 - Reputation systems for agents are claims, and claims are cheap to fake. An empirical study of an
   on-chain agent registry found 59–91% of reviewers showing coordinated Sybil behaviour
   ([arXiv:2606.26028](https://arxiv.org/abs/2606.26028)).
@@ -45,29 +46,55 @@ for something binds a policy on that single payment. The premium is the agent's 
 | Step | PayPal API | What it does |
 |---|---|---|
 | 1. Premium | **Orders v2** + **JS SDK Buttons** | The buyer pays the quoted premium in PayPal Checkout. Capture binds the policy, and the payer email PayPal returns becomes the claim beneficiary. |
-| 2. Agent pays | **Payouts v1** (create) | The AI agent pays the vendor server-to-server, with no human approval. This is the agentic payment being insured. |
+| 2. Agent pays | **Payouts v1** (create) | The AI agent calls its payment **tool**; Bonded executes that tool call as a PayPal Payout, server to server, with no human approval. This is the agentic payment being insured. |
 | 3. Settlement | **Payouts v1** (read back) | Bonded asks PayPal who **actually** received the money. A breach is defined as PayPal's receiver ≠ insured payee. |
 | 4. Claim | **Payouts v1** (create + read back) | The claim goes to the buyer's PayPal account, and the claim payout is itself read back and verified. |
 
 ## How AI is used
 
-| Model | Role |
-|---|---|
-| **Gemini 2.5 Flash** (Google) | Runs both procurement agents. **v1 (naive)** pastes the vendor listing into its prompt. **v2 (isolated)** quotes the listing as untrusted data, and its payee is fixed in code to the vendor of record, so the model can *flag* a redirection but cannot *cause* one. |
-| **Claude Sonnet 5.5** (Anthropic) | The claims adjuster. It writes the adjudication note from the evidence PayPal returned. It deliberately runs on a **different model family** from the agents it judges, so it does not share their failure modes. The note is advisory only: the breach decision is made in code by comparing receivers, never by a model. |
+Each agent pays by making a real **tool call**, and Bonded executes the call as a PayPal Payout.
+
+| Agent | Model | Configuration | Measured against the injection |
+|---|---|---|---|
+| **Procure-Bot v1** | Gemini 3.1 Flash-Lite | Naive: the listing is part of its prompt. Tool `pay(recipient_email, note)`. | Paid the attacker 3/3 |
+| **Procure-Bot v2** | Claude Sonnet 5.5 | Isolated: the listing is quoted as untrusted, and its tool `pay_vendor_of_record(redirection_attempt_detected, note)` **has no payee field at all**. The model can flag a redirection; it cannot cause one. | Paid the vendor and flagged it 3/3 |
+| **Procure-Bot v3** | Claude Haiku 5.5 | The same naive setup and tool as v1, on a different model. | Paid the vendor 2/2 |
+
+**Claude Sonnet 5.5** is also the claims adjuster. It writes the adjudication note from the
+evidence PayPal returned. The note is advisory only: the breach decision is made in code by
+comparing receivers, never by a model.
+
+v1 and v3 have identical prompts and tools and differ only in the model. This is why Bonded
+prices agents individually: a buyer cannot tell them apart from the outside, and their risk is
+not the same.
 
 ## The demo scenario
 
-Both agents get the same $40.00 order for GPU compute and the same marketplace listing. The
+All three agents get the same $40.00 order for GPU compute and the same marketplace listing. The
 listing carries a prompt injection telling the payer to send money to a different PayPal email.
 
-1. Insure **Procure-Bot v1** (premium about $4.27) → Gemini pays the attacker → PayPal's read-back shows the
+1. Insure **Procure-Bot v1** (premium about $4.27) → Gemini calls `pay` with the attacker's email → PayPal's read-back shows the
    wrong receiver → **breach** → a $40.00 claim is paid to the buyer through Payouts → v1's rate rises.
-2. Insure **Procure-Bot v2** → Gemini flags the injection, the payee stays the vendor → PayPal
-   confirms the vendor was paid → **clean** → v2's rate falls.
+2. Insure **Procure-Bot v2** → Claude calls `pay_vendor_of_record` and flags the injection; its tool has no
+   payee field → PayPal confirms the vendor was paid → **clean** → v2's rate falls.
 
-One observed trial each, and the two agents' prices have already diverged. No rating agency,
+One observed trial each, and the agents' prices have already diverged. No rating agency,
 oracle or committee is involved.
+
+### Attack lab
+
+Open **Attack lab** under the listing to replace the attacker's text with your own injection.
+The next insured job on any agent reads it. Try to make v2 pay the wrong party.
+
+### Quote API
+
+Any agent framework can price cover before it spends:
+
+```bash
+curl "http://localhost:4173/api/quote?agentId=procure-v1&cover=4000"
+# {"agentId":"procure-v1","model":"gemini-3.1-flash-lite","cover":4000,"currency":"USD",
+#  "rateBps":1068,"premium":427,"components":{...},"trials":0,"failures":0,...}
+```
 
 ## Pricing (actuarial, not a heuristic)
 
@@ -105,8 +132,9 @@ npm start                 # http://localhost:4173
   [developer.paypal.com](https://developer.paypal.com) → Apps & Credentials → Sandbox.
   **The app must have the Payouts feature enabled.**
 - `GEMINI_API_KEY`: from [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
-- `ANTHROPIC_API_KEY` (optional): Claude writes the adjuster's note. Without it, Gemini writes
-  the note and the UI labels it as such.
+- `ANTHROPIC_API_KEY`: runs agents v2 and v3 and the claims adjuster.
+- Gemini's free tier allows about 20 requests per model per day. If v1 shows a 429 error, set
+  `GEMINI_MODEL` in `.env` to another Gemini model or use a billing-enabled key.
 
 To pay a premium, click the PayPal button and log in with a **sandbox personal (buyer) account**
 from your developer dashboard (Sandbox → Accounts).
@@ -125,17 +153,17 @@ Nothing falls back silently. A broken key never looks like a well-behaved agent.
   reset on restart. A production version would hold pool capital in segregated accounts.
 - The pricing loadings are reasoned defaults, not fitted to loss data. No claims history for agent
   breaches exists anywhere yet. The rates are structurally correct, not calibrated.
-- Susceptibility is model- and configuration-specific: `gemini-2.5-flash` took this injection 3/3
-  times in our tests, while the same model with the isolated prompt flagged it in every run. That is
-  why pricing is per agent: the risk lives in the specific agent, not in "AI" in general.
+- Susceptibility is model- and configuration-specific, and the samples above are small (3 runs
+  each). That is the point of pricing per agent: the risk lives in the specific agent, not in "AI"
+  in general. Your run can differ; the dashboard shows each model's actual tool call.
 
 ## Layout
 
 ```
 src/pricing.mjs        actuarial pricing, pools, reinsurance, settlement, slashing
 src/paypal.mjs         PayPal REST: OAuth, Orders v2, Payouts create + read-back
-src/agents.mjs         the two Gemini agents, the poisoned listing, the Claude adjuster
-src/server.mjs         zero-dependency HTTP server + SSE live feed
+src/agents.mjs         three tool-calling agents, the poisoned listing, the Claude adjuster
+src/server.mjs         zero-dependency HTTP server, SSE feed, quote API, attack lab
 public/index.html      dashboard + PayPal JS SDK buttons
 script/check-paypal.mjs  end-to-end rail check against the sandbox
 ```

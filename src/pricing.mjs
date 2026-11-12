@@ -59,9 +59,12 @@ export function rate(book, id, cover) {
   };
 }
 
-export function bind(book, id, { cover, expectedRecipient, premiumPaid, beneficiary }) {
+/// Bind at the price the buyer approved. Re-pricing at capture time would let a
+/// concurrent settlement move the rate after PayPal has already taken the money.
+export function bind(book, id, { cover, expectedRecipient, premiumPaid, quoted, beneficiary }) {
   const a = book.agents[id];
-  const q = rate(book, id, cover);
+  rate(book, id, cover); // capacity check only; throws if the pool cannot take it
+  const q = quoted;
   if (premiumPaid !== q.premium) throw new Error(`Premium mismatch: quoted ${q.premium}¢, paid ${premiumPaid}¢`);
   const ceded = Math.floor(cover * CESSION_BPS / BPS);
   const cededPremium = Math.floor(premiumPaid * CESSION_BPS / BPS);
