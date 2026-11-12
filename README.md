@@ -7,6 +7,10 @@ market's live price of that agent's risk. It is computed from a loss record that
 **only from what PayPal says actually happened**. If the agent pays the wrong party, the claim
 comes back to your PayPal account.
 
+**Live demo: https://bonded-urgg.onrender.com** (hosted on Render; the free instance may take
+about 50 seconds to wake up). Paying a premium needs a PayPal **sandbox** buyer account: use your
+own from developer.paypal.com, or the test login given in the Devpost testing instructions.
+
 ![Bonded dashboard](docs/dashboard.png)
 
 ---
@@ -122,6 +126,11 @@ rate = floor
 - **Share-based slashing**: a loss is spread pro-rata across every underwriter in the pool. The
   dashboard shows each underwriter's stake shrinking.
 
+## API spec
+
+`openapi.yaml` is an OpenAPI 3.0 description of the Bonded API (quote, premium order and capture,
+book, event stream, attack lab), so agent frameworks can generate a client for it.
+
 ## Run it
 
 Requires **Node 22+**. There are no npm dependencies to install.
@@ -174,6 +183,8 @@ src/agents.mjs         three tool-calling agents, the poisoned listing, the Clau
 src/server.mjs         zero-dependency HTTP server, SSE feed, quote API, attack lab
 public/index.html      dashboard, PayPal JS SDK buttons, AG Grid policy book
 script/check-paypal.mjs  end-to-end rail check against the sandbox
+openapi.yaml           OpenAPI 3.0 spec of the API
+render.yaml            Render blueprint for the hosted demo
 ```
 
 ## License
