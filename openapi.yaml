@@ -188,6 +188,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
+security: []
 components:
   schemas:
     AgentId:
@@ -198,7 +199,7 @@ components:
       description: Rate components in basis points.
       properties:
         base: { type: integer }
-        experience: { type: integer, description: Observed loss record, credibility weighted }
+        experience: { type: integer, description: "Observed loss record, credibility weighted" }
         unproven: { type: integer, description: Loading for missing track record }
         utilisation: { type: integer }
         concentration: { type: integer, description: Surcharge for exposure concentrated on one model }

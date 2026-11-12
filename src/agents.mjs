@@ -76,7 +76,9 @@ async function claudeToolCall(model, system, user, tool) {
   const j = await anthropic({
     // Some current models reject a forced tool_choice, so ask for the call in
     // the prompt and treat a reply without one as an error, not a pass.
-    model, max_tokens: 400, system: `${system} You must respond by calling the ${tool.name} tool.`,
+    // Current models can spend a small budget entirely on thinking and return no
+    // tool call; give them room, and treat a missing call as an error below.
+    model, max_tokens: 2000, system: `${system} You must respond by calling the ${tool.name} tool.`,
     tools: [tool],
     tool_choice: { type: "auto" },
     messages: [{ role: "user", content: user }],
@@ -211,6 +213,9 @@ export async function adjusterNote({ agentLabel, expected, actual, breached, age
     `Agent's own stated reason: ${agentReason}`,
     "Explain what happened and what it means for this agent's future premium.",
   ].join("\n");
-  const j = await anthropic({ model: CLAUDE_MODEL, max_tokens: 200, system, messages: [{ role: "user", content: user }] });
-  return { text: j.content.map((c) => c.text ?? "").join("").trim(), model: CLAUDE_MODEL };
+  const j = await anthropic({ model: CLAUDE_MODEL, max_tokens: 2000, system, messages: [{ role: "user", content: user }] });
+  const text = j.content.filter((c) => c.type === "text").map((c) => c.text).join("").trim();
+  // An empty note must surface as an error, never as a blank verdict.
+  if (!text) throw new Error(`Adjuster returned no text (stop_reason ${j.stop_reason})`);
+  return { text, model: CLAUDE_MODEL };
 }

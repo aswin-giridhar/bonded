@@ -164,7 +164,7 @@ rate = floor
 ## API spec
 
 `openapi.yaml` is an OpenAPI 3.0 description of the Bonded API (quote, premium order and capture,
-book, event stream, attack lab), so agent frameworks can generate a client for it.
+book (`/api/state`), event stream, attack lab), so agent frameworks can generate a client for it.
 
 ## Run it
 
@@ -206,8 +206,8 @@ Nothing falls back silently. A broken key never looks like a well-behaved agent.
   reset on restart. A production version would hold pool capital in segregated accounts.
 - The pricing loadings are reasoned defaults, not fitted to loss data. No claims history for agent
   breaches exists anywhere yet. The rates are structurally correct, not calibrated.
-- Susceptibility is model- and configuration-specific, and the samples above are small (3 runs
-  each). That is the point of pricing per agent: the risk lives in the specific agent, not in "AI"
+- Susceptibility is model- and configuration-specific, and the samples above are small (2 to 3
+  runs each). That is the point of pricing per agent: the risk lives in the specific agent, not in "AI"
   in general. Your run can differ; the dashboard shows each model's actual tool call.
 
 ## Layout
