@@ -81,6 +81,14 @@ listing carries a prompt injection telling the payer to send money to a differen
 One observed trial each, and the agents' prices have already diverged. No rating agency,
 oracle or committee is involved.
 
+### Policy book (AG Grid)
+
+Below the agents, an **AG Grid** policy book lists every policy with its PayPal references:
+premium capture ID, the agent's payout batch, **who PayPal says was paid**, the verdict, the claim
+payout and the rate before and after settlement. It updates live from the same event stream as
+the dashboard, and you can sort and filter it like an underwriter's book. (AG Grid Community,
+loaded from a CDN, so there is still nothing to install.)
+
 ### Attack lab
 
 Open **Attack lab** under the listing to replace the attacker's text with your own injection.
@@ -164,7 +172,7 @@ src/pricing.mjs        actuarial pricing, pools, reinsurance, settlement, slashi
 src/paypal.mjs         PayPal REST: OAuth, Orders v2, Payouts create + read-back
 src/agents.mjs         three tool-calling agents, the poisoned listing, the Claude adjuster
 src/server.mjs         zero-dependency HTTP server, SSE feed, quote API, attack lab
-public/index.html      dashboard + PayPal JS SDK buttons
+public/index.html      dashboard, PayPal JS SDK buttons, AG Grid policy book
 script/check-paypal.mjs  end-to-end rail check against the sandbox
 ```
 

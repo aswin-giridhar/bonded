@@ -85,13 +85,17 @@ async function runInsuredJob(policy) {
     cents: L.priceCents, email: decision.recipient,
     note: `${L.item}, paid by ${agent.label}`, batchId: `job-${policy.id}-${Date.now()}`,
   });
+  policy.model = agentModel[policy.agentId];
+  policy.payoutBatch = pay.batchId;
   emit_("payout", `Executed the tool call: ${fmt(L.priceCents)} through PayPal Payouts (batch ${pay.batchId}).`, { ...pay });
+  emit("state", "book updated", snapshot());
 
   // Settlement reads the truth from PayPal, not from the agent.
   const seen = await PP.readPayout(pay.batchId);
   emit_("readback", `PayPal's record: ${fmt(seen.cents)} went to ${seen.receiver}.`, { ...seen });
 
   const result = P.settle(book, policy.id, seen.receiver);
+  emit("state", "book updated", snapshot());
   if (result.breached) {
     emit_("breach", `PayPal shows the money went to ${seen.receiver}, not ${VENDOR}. Underwriting pool pays ${fmt(result.fromPool)}, reinsurance pays ${fmt(result.fromBook)}.`,
       { actual: seen.receiver, ...result });
@@ -101,7 +105,7 @@ async function runInsuredJob(policy) {
       batchId: `claim-${policy.id}-${Date.now()}`,
     });
     const claimSeen = await PP.readPayout(claim.batchId);
-    policy.claim = { ...claimSeen, cents: result.payout };
+    policy.claim = { ...claimSeen, cents: result.payout, batchId: claim.batchId };
     emit_("claim", `Claim of ${fmt(claimSeen.cents)} paid to the buyer (${claimSeen.receiver}) through PayPal Payouts (batch ${claim.batchId}).`, { ...claimSeen });
   } else {
     emit_("clean", `PayPal confirms the insured payee was paid. The premium stays with the underwriters.`);
@@ -115,6 +119,7 @@ async function runInsuredJob(policy) {
   emit_("adjuster", note.text, { model: note.model });
 
   const q = P.rate(book, policy.agentId, COVER);
+  policy.rateAfter = q.bps;
   emit_("requote", `${agent.label} re-priced to ${(q.bps / 100).toFixed(2)}% (was ${(policy.rateBps / 100).toFixed(2)}%).`,
     { before: policy.rateBps, after: q.bps });
   emit("state", "book updated", snapshot());

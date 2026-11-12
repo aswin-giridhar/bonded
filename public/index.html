@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/dist/ag-grid-community.min.js"></script>
 <style>
   :root {
     --paper: #eef1ef;
@@ -142,6 +143,19 @@
   .lab button { font: 500 14px "IBM Plex Sans", sans-serif; padding: 9px 14px; border-radius: 4px; border: 1px solid var(--ink); background: var(--ink); color: var(--sheet); cursor: pointer; min-height: 40px; }
   .lab button.ghost { background: transparent; color: var(--ink); }
   .lab button:active { transform: translateY(1px); }
+  .book-grid { margin-top: 32px; }
+  #grid { height: 236px; width: 100%; }
+  .ag-theme-quartz {
+    --ag-font-family: "IBM Plex Sans", system-ui, sans-serif; --ag-font-size: 13.5px;
+    --ag-foreground-color: var(--ink); --ag-secondary-foreground-color: var(--ink-2);
+    --ag-background-color: var(--sheet); --ag-header-background-color: var(--paper);
+    --ag-odd-row-background-color: var(--sheet); --ag-border-color: var(--rule); --ag-row-border-color: var(--rule);
+    --ag-header-foreground-color: var(--ink); --ag-wrapper-border-radius: 6px; --ag-active-color: var(--green);
+  }
+  .ag-theme-quartz .mono-cell { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; }
+  .ag-theme-quartz .v-breach { color: var(--red); font-weight: 600; }
+  .ag-theme-quartz .v-clean { color: var(--green); font-weight: 600; }
+  .ag-theme-quartz .up { color: var(--red); } .ag-theme-quartz .down { color: var(--green); }
   .how { margin-top: 28px; }
   .steps { list-style: none; counter-reset: s; display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; padding: 0; margin: 10px 0 0; font-size: 14px; color: var(--ink-2); }
   @media (max-width: 860px) { .steps { grid-template-columns: 1fr 1fr; } }
@@ -204,6 +218,12 @@
       <ol class="entries" id="feed" aria-live="polite"><li class="empty">Nothing yet. Buy cover on any agent to start.</li></ol>
     </aside>
   </div>
+  <section class="book-grid" aria-labelledby="book-h">
+        <h2 id="book-h">Policy book</h2>
+        <p class="hint">Every policy with its PayPal references: the premium capture, the agent's payout, who PayPal says was paid, and any claim.</p>
+        <div id="grid" class="ag-theme-quartz"></div>
+  </section>
+
 </div>
 
 <script>
@@ -306,6 +326,44 @@ function render() {
   state.agents.forEach(renderBond);
 }
 
+let grid;
+const LABEL = { "procure-v1": "Procure-Bot v1", "procure-v2": "Procure-Bot v2", "procure-v3": "Procure-Bot v3" };
+function policyRows() {
+  return (state.policies ?? []).map((p) => ({
+    id: p.id, agent: LABEL[p.agentId] ?? p.agentId, model: p.model ?? "",
+    premium: p.premium, rate: p.rateBps, rateAfter: p.rateAfter ?? null,
+    status: !p.payoutBatch ? "Bound" : !p.resolved ? "Agent paid" : p.breached ? "Breach" : "Clean",
+    capture: p.premiumCapture ?? "", payout: p.payoutBatch ?? "", paidTo: p.actualRecipient ?? "",
+    claim: p.claim ? `${fmt(p.claim.cents)}, ${p.claim.batchId ?? ""}` : "",
+  }));
+}
+function initGrid() {
+  if (!window.agGrid) { document.getElementById("grid").textContent = "AG Grid did not load, so the policy book is unavailable."; return; }
+  const money = (v) => (v == null ? "" : fmt(v.value));
+  const rate = (v) => (v.value == null ? "" : pct(v.value));
+  grid = agGrid.createGrid(document.getElementById("grid"), {
+    rowData: policyRows(),
+    getRowId: (p) => String(p.data.id),
+    defaultColDef: { sortable: true, resizable: true, filter: true },
+    overlayNoRowsTemplate: "No policies yet. Buy cover on any agent to write the first one.",
+    animateRows: true,
+    columnDefs: [
+      { field: "id", headerName: "#", width: 56, sort: "desc" },
+      { field: "agent", headerName: "Agent", width: 124 },
+      { field: "model", headerName: "Model", width: 168, cellClass: "mono-cell" },
+      { field: "premium", headerName: "Premium", width: 100, valueFormatter: money },
+      { field: "rate", headerName: "Rate", width: 88, valueFormatter: rate },
+      { field: "status", headerName: "Verdict", width: 100, cellClassRules: { "v-breach": (p) => p.value === "Breach", "v-clean": (p) => p.value === "Clean" } },
+      { field: "paidTo", headerName: "PayPal says paid", width: 250, cellClass: "mono-cell" },
+      { field: "claim", headerName: "Claim", width: 210, cellClass: "mono-cell" },
+      { field: "rateAfter", headerName: "Re-priced", width: 100, valueFormatter: rate,
+        cellClassRules: { up: (p) => p.value != null && p.value > p.data.rate, down: (p) => p.value != null && p.value < p.data.rate } },
+      { field: "capture", headerName: "Premium capture", width: 180, cellClass: "mono-cell" },
+      { field: "payout", headerName: "Agent payout", width: 150, cellClass: "mono-cell" },
+    ],
+  });
+}
+
 async function saveInjection(payload) {
   const st = document.getElementById("inj-status");
   const res = await fetch("/api/listing", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
@@ -327,7 +385,7 @@ function addEntry(ev) {
 }
 
 function onEvent(ev) {
-  if (ev.type === "state") { state = { ...ev.data, noClient: state?.noClient }; return render(); }
+  if (ev.type === "state") { state = { ...ev.data, noClient: state?.noClient }; grid?.setGridOption("rowData", policyRows()); return render(); }
   addEntry(ev);
   const d = ev.data ?? {}, aid = d.policyId ? d.agentId : null;
   if (!aid) return;
@@ -359,6 +417,7 @@ function onEvent(ev) {
   const { clientId } = await (await fetch("/api/config")).json();
   state.noClient = !clientId;
   render();
+  initGrid();
   if (clientId) {
     const s = document.createElement("script");
     s.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=USD&intent=capture&disable-funding=card,credit,paylater,venmo`;
